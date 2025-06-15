@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-  packages: write     # cho phép pull/push GHCR
+  packages: write
 
 jobs:
   build_and_push:
@@ -81,6 +81,5 @@ jobs:
             -i infra-ansible/ansible/inventory.ini \
             infra-ansible/ansible/deploy.yml \
             --private-key ~/.ssh/prod-key.pem \
+            -b \
             --extra-vars "registry=ghcr.io/${{ github.repository }} image_tag=${{ needs.build_and_push.outputs.image_tag }}"
-            -b
-        
