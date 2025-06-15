@@ -49,6 +49,7 @@
         name: "{{ registry }}/backend"
         tag: "{{ image_tag }}"
         source: pull
+        platform: linux/amd64
 
     - name: Run backend container
       docker_container:
@@ -60,6 +61,7 @@
         recreate: yes
         state: started
         restart_policy: unless-stopped
+        platform: linux/amd64
 
     # - name: Remove existing frontend container
     #   docker_container:
@@ -71,6 +73,7 @@
     #     name: "{{ registry }}/frontend"
     #     tag: "{{ image_tag }}"
     #     source: pull
+    #     platform: linux/amd64
 
     # - name: Run frontend container
     #   docker_container:
@@ -82,3 +85,4 @@
     #     recreate: yes
     #     state: started
     #     restart_policy: unless-stopped
+    #     platform: linux/amd64
