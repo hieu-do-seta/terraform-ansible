@@ -2,7 +2,7 @@
 - hosts: app
   become: yes
   vars:
-    app_dir: /home/ubuntu/app        # Đổi từ /opt/myapp thành /home/ubuntu/app
+    app_dir: /opt/myapp        # Giữ nguyên với đường dẫn bootstrap
     registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
 
@@ -36,7 +36,7 @@
       pip:
         name: docker
 
-    # 3. Xóa container cũ, kéo image mới
+    # 3. Xóa container cũ, kéo image mới và khởi container
     - name: Xóa container backend cũ (nếu có)
       docker_container:
         name: backend
