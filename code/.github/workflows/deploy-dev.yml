@@ -1,0 +1,93 @@
+name: Deploy Dev Infra
+
+on:
+  push:
+    branches:
+      - develop  # Khi push vào branch develop thì chạy CI/CD
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Build Frontend
+        working-directory: ./frontend
+        run: |
+          echo "Building frontend..."
+
+      - name: Package Backend
+        working-directory: ./backend
+        run: |
+          npm ci
+          zip -r ../backend.zip .
+
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY_DEV }}
+
+      - name: Deploy Frontend to Nginx Server
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null frontend/index.html ubuntu@${{ secrets.NGINX_HOST_DEV }}:/tmp/
+          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@${{ secrets.NGINX_HOST_DEV }} "sudo mv /tmp/index.html /var/www/html/index.html"
+
+      - name: Copy Backend Package to Bastion
+        run: |
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null backend.zip ubuntu@${{ secrets.BASTION_IP_DEV }}:/home/ubuntu/
+
+      - name: Copy Private SSH Key to Bastion
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.BASTION_IP_DEV }} <<'ENDSSH'
+            echo "${{ secrets.EC2_SSH_KEY_DEV }}" > /home/ubuntu/deploy_key.pem
+            chmod 600 /home/ubuntu/deploy_key.pem
+          ENDSSH
+
+      - name: Prepare Backend Directory
+        run: |
+          ssh \
+            -o ProxyCommand="ssh -W %h:%p ubuntu@${{ secrets.BASTION_IP_DEV }}" \
+            -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.API_PRIVATE_IP_DEV }} <<'ENDSSH'
+            mkdir -p /home/ubuntu/app
+          ENDSSH
+
+      - name: Deploy Backend via Bastion
+        run: |
+          scp \
+            -o ProxyCommand="ssh -W %h:%p ubuntu@${{ secrets.BASTION_IP_DEV }}" \
+            -o StrictHostKeyChecking=no \
+            backend.zip ubuntu@${{ secrets.API_PRIVATE_IP_DEV }}:/home/ubuntu/app/
+
+      - name: Restart Backend
+        run: |
+          ssh \
+            -o ProxyCommand="ssh -W %h:%p ubuntu@${{ secrets.BASTION_IP_DEV }}" \
+            -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.API_PRIVATE_IP_DEV }} <<'ENDSSH'
+            if ! command -v unzip &> /dev/null; then
+              sudo apt-get update
+              sudo apt-get install -y unzip
+            fi
+
+            if ! command -v npm &> /dev/null; then
+              curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+              sudo apt-get install -y nodejs
+            fi
+
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            cd /home/ubuntu/app
+            unzip -o backend.zip
+            npm install
+            pm2 restart all || pm2 start index.js
+          ENDSSH

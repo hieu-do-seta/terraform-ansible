@@ -1,0 +1,40 @@
+---
+- hosts: app
+  become: yes
+  vars_files:
+    - group_vars/all.yml     # hoặc vars/bootstrap_vars.yml
+
+  vars:
+    app_dir: /opt/myapp
+
+  tasks:
+    - name: Cài Docker & pip
+      apt:
+        name:
+          - docker.io
+          - python3-pip
+        update_cache: yes
+
+    - name: Cài Docker SDK cho Python
+      pip:
+        name: docker
+
+    - name: Cài docker-compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/latest/download/docker-compose-{{ ansible_system }}-{{ ansible_machine }}"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+
+    - name: Tạo thư mục app
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: ubuntu
+        mode: '0755'
+
+    - name: Tạo file .env từ template
+      template:
+        src: templates/env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: '0600'

@@ -1,0 +1,27 @@
+# Bỏ qua node_modules
+node_modules/
+
+# Bỏ qua log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Bỏ qua môi trường
+.env
+.env.local
+.env.*.local
+
+# Bỏ qua hệ thống
+.DS_Store
+Thumbs.db
+
+# Bỏ qua thư mục build (nếu có)
+dist/
+build/
+
+# Bỏ qua lock file nếu không dùng package manager đó
+# (chọn giữ lại một trong số này tuỳ bạn dùng npm/yarn/pnpm)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

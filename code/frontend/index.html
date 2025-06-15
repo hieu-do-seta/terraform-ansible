@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Demo Frontend</title>
+</head>
+
+<body>
+    <h1>Welcome to Demo Frontend</h1>
+    <div id="message">Loading...</div>
+
+    <script>
+        fetch('/api/hello')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('message').innerText = data.message + " @ " + data.time;
+            })
+            .catch(error => {
+                document.getElementById('message').innerText = 'Error loading API';
+            });
+    </script>
+    <div>Hello</div>
+</body>
+
+</html>
