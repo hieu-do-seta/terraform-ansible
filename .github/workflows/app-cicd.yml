@@ -51,18 +51,25 @@ jobs:
           echo "${{ secrets.PROD_KEY }}" > keys/prod-key.pem
           chmod 600 keys/prod-key.pem
 
-      - name: Run Ansible deploy playbook
+      - name: Deploy ứng dụng qua Ansible
         uses: dawidd6/action-ansible-playbook@v2
         with:
-          playbook: infra-ansible/ansible/deploy.yml
-          inventory: |
-            [app]
-            ${{ secrets.SERVER_IP }}
+            # 1) Playbook bạn muốn chạy
+            playbook: infra-ansible/ansible/deploy.yml
 
-            [app:vars]
-            ansible_user=ubuntu
-            ansible_ssh_private_key_file=keys/prod-key.pem
-            ansible_ssh_common_args='-o ProxyCommand="ssh -i keys/prod-key.pem -W %h:%p ubuntu@${{ secrets.BASTION_IP }}" -o StrictHostKeyChecking=no'
-          extra_vars: |
-            registry=ghcr.io/${{ github.repository }}
-            image_tag=${{ needs.build_and_push.outputs.image_tag }}
+            # 2) Inventory inline, có ProxyCommand cho bastion
+            inventory: |
+              [app]
+              ${{ secrets.SERVER_IP }}
+
+              [app:vars]
+              ansible_user=ubuntu
+              # proxy qua bastion
+              ansible_ssh_common_args='-o ProxyCommand="ssh -i ~/.ssh/prod-key.pem -W %h:%p ubuntu@${{ secrets.BASTION_IP }}" -o StrictHostKeyChecking=no'
+
+            # 3) Đường dẫn đến SSH key bạn vừa tạo
+            key: keys/prod-key.pem
+
+            # 4) Truyền extra-vars qua options
+            options: >-
+              --extra-vars "registry=ghcr.io/${{ github.repository }} image_tag=${{ needs.build_and_push.outputs.image_tag }}"
