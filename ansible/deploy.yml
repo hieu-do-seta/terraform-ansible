@@ -7,6 +7,27 @@
     image_tag: "{{ image_tag }}"
 
   tasks:
+    # Debug: kiểm tra file .env
+    - name: Kiểm tra tồn tại file .env
+      stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file_stat
+
+    - name: Hiển thị thông tin stat file
+      debug:
+        var: env_file_stat
+
+    - name: Hiển thị nội dung file .env (nếu có)
+      command: cat "{{ app_dir }}/.env"
+      register: env_file_content
+      when: env_file_stat.stat.exists
+
+    - name: Hiển thị log nội dung .env
+      debug:
+        var: env_file_content.stdout_lines
+      when: env_file_stat.stat.exists
+
+    # Đảm bảo Docker & các tool đã cài
     - name: Đảm bảo Docker & pip đã cài đặt
       apt:
         name:
@@ -24,6 +45,12 @@
       pip:
         name: docker
 
+    # Pull image và chạy container
+    - name: Xóa container backend cũ (nếu có)
+      docker_container:
+        name: backend
+        state: absent
+
     - name: Pull backend image
       docker_image:
         name: "{{ registry }}/backend"
@@ -39,3 +66,26 @@
           - "3000:3000"
         state: started
         restart_policy: unless-stopped
+        recreate: yes
+
+    - name: Xóa container frontend cũ (nếu có)
+      docker_container:
+        name: frontend
+        state: absent
+
+    - name: Pull frontend image
+      docker_image:
+        name: "{{ registry }}/frontend"
+        tag: "{{ image_tag }}"
+        source: pull
+
+    - name: Khởi frontend container
+      docker_container:
+        name: frontend
+        image: "{{ registry }}/frontend:{{ image_tag }}"
+        env_file: "{{ app_dir }}/.env"
+        ports:
+          - "80:80"
+        state: started
+        restart_policy: unless-stopped
+        recreate: yes
