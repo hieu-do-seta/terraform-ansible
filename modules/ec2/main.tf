@@ -15,19 +15,19 @@ resource "aws_instance" "web" {
     apt-get update -y
     apt-get install -y nginx
 
-    # Ensure /var/www/html exists
-    mkdir -p /var/www/html
-    echo "<h1>Welcome to nginx frontend</h1>" > /var/www/html/index.html
-
+    # Cấu hình Nginx để reverse proxy đến frontend container (localhost:8080) và backend API
     cat > /etc/nginx/sites-available/default <<EONGINX
     server {
         listen 80;
         server_name _;
-        root /var/www/html;
-        index index.html index.htm;
 
         location / {
-            try_files \$uri \$uri/ =404;
+            proxy_pass http://localhost:8080/;
+            proxy_http_version 1.1;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
         }
 
         location /api/ {
@@ -35,12 +35,15 @@ resource "aws_instance" "web" {
             proxy_http_version 1.1;
             proxy_set_header Host \$host;
             proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
         }
     }
     EONGINX
 
     systemctl restart nginx
   EOF
+
 
   tags = {
     Name = "nginx-web"
