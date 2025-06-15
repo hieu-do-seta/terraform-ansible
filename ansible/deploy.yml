@@ -58,8 +58,8 @@
       community.docker.docker_container:
         name: frontend
         image: "{{ registry }}/frontend:{{ image_tag }}"
-        state: started
         published_ports:
-          - "80:80"
+          - "8080:80"
         restart_policy: unless-stopped
         recreate: yes
+
