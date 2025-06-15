@@ -34,10 +34,14 @@ jobs:
             -t ghcr.io/${{ github.repository_owner }}/backend:${{ github.sha }} \
             code/backend \
             --push
+
       - name: Build & Push Frontend
         run: |
-          docker build -f code/frontend/Dockerfile -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} code/frontend
-          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+          docker build \
+            -f code/frontend/Dockerfile \
+            -t ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }} \
+            code/frontend
+          docker push ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
 
   deploy:
     needs: build_and_push
@@ -69,6 +73,7 @@ jobs:
             IdentityFile ~/.ssh/prod-key.pem
             ProxyJump bastion
             StrictHostKeyChecking no
+
           Host frontend-server
             HostName ${{ secrets.FRONTEND_IP }}
             User ubuntu
@@ -81,7 +86,7 @@ jobs:
         run: |
           echo "[app]" > infra-ansible/ansible/inventory.ini
           echo "app-server" >> infra-ansible/ansible/inventory.ini
-
+          echo "" >> infra-ansible/ansible/inventory.ini
           echo "[frontend]" >> infra-ansible/ansible/inventory.ini
           echo "frontend-server" >> infra-ansible/ansible/inventory.ini
 
@@ -96,12 +101,10 @@ jobs:
       - name: Chạy Ansible deploy
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ansible-playbook \
             -i infra-ansible/ansible/inventory.ini \
             --private-key ~/.ssh/prod-key.pem \
             -b \
-            --extra-vars "registry=ghcr.io/${{ github.repository_owner }} image_tag=${{ needs.build_and_push.outputs.image_tag }}" \
+            --extra-vars "registry=ghcr.io/${{ github.repository_owner }} image_tag=${{ needs.build_and_push.outputs.image_tag }} github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }}" \
             infra-ansible/ansible/deploy.yml

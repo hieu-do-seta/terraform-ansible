@@ -1,3 +1,5 @@
+---
+
 - hosts: app
   become: yes
   collections:
@@ -5,17 +7,21 @@
   vars:
     registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
+    github_actor: "{{ github_actor }}"
+    github_token: "{{ github_token }}"
   tasks:
     - name: Docker login GHCR
       community.docker.docker_login:
         registry_url: ghcr.io
         username: "{{ github_actor }}"
         password: "{{ github_token }}"
+
     - name: Pull backend image
       community.docker.docker_image:
         name: "{{ registry }}/backend"
         tag: "{{ image_tag }}"
         source: pull
+
     - name: Run backend container
       community.docker.docker_container:
         name: backend
@@ -33,17 +39,21 @@
   vars:
     registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
+    github_actor: "{{ github_actor }}"
+    github_token: "{{ github_token }}"
   tasks:
     - name: Docker login GHCR
       community.docker.docker_login:
         registry_url: ghcr.io
         username: "{{ github_actor }}"
         password: "{{ github_token }}"
+
     - name: Pull frontend image
       community.docker.docker_image:
         name: "{{ registry }}/frontend"
         tag: "{{ image_tag }}"
         source: pull
+
     - name: Run frontend container
       community.docker.docker_container:
         name: frontend
