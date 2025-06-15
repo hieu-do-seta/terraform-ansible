@@ -1,4 +1,3 @@
-# infra-ansible/ansible/deploy.yml
 ---
 - hosts: app
   become: yes
@@ -7,10 +6,14 @@
 
   vars:
     app_dir: /opt/myapp
-    registry: "{{ registry }}"
+    registry: "ghcr.io/{{ github_actor }}"
     image_tag: "{{ image_tag }}"
 
   tasks:
+    - name: Docker login to GHCR (nếu image private, có thể xoá nếu public)
+      ansible.builtin.shell: |
+        echo "{{ github_token }}" | docker login ghcr.io -u {{ github_actor }} --password-stdin
+
     - name: Pull backend image
       community.docker.docker_image:
         name: "{{ registry }}/backend"
@@ -26,20 +29,3 @@
           - "3000:3000"
         recreate: yes
         restart_policy: unless-stopped
-
-    # (tuỳ chọn) Thêm frontend tương tự nếu có
-    # - name: Pull frontend image
-    #   community.docker.docker_image:
-    #     name: "{{ registry }}/frontend"
-    #     tag: "{{ image_tag }}"
-    #     source: pull
-
-    # - name: Run frontend container
-    #   community.docker.docker_container:
-    #     name: frontend
-    #     image: "{{ registry }}/frontend:{{ image_tag }}"
-    #     env_file: "{{ app_dir }}/.env"
-    #     ports:
-    #       - "80:80"
-    #     recreate: yes
-    #     restart_policy: unless-stopped

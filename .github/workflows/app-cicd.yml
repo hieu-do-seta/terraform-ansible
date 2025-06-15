@@ -85,13 +85,14 @@ jobs:
 
       - name: Chạy Ansible deploy
         env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ANSIBLE_HOST_KEY_CHECKING: "False"
+            GITHUB_ACTOR: ${{ github.actor }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
         run: |
-          ansible-playbook \
-            -i infra-ansible/ansible/inventory.ini \
-            --private-key ~/.ssh/prod-key.pem \
-            -b \
-            --extra-vars "registry=ghcr.io/${{ github.repository }} image_tag=${{ needs.build_and_push.outputs.image_tag }}" \
-            infra-ansible/ansible/deploy.yml
+            ansible-playbook \
+                -i infra-ansible/ansible/inventory.ini \
+                --private-key ~/.ssh/prod-key.pem \
+                -b \
+                --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }} image_tag=${{ needs.build_and_push.outputs.image_tag }}" \
+                infra-ansible/ansible/deploy.yml
