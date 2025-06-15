@@ -1,3 +1,4 @@
+# infra-ansible/ansible/deploy.yml
 ---
 - hosts: app
   become: yes
@@ -7,33 +8,37 @@
     image_tag: "{{ image_tag }}"
 
   tasks:
-    - name: Stat .env
-      stat:
-        path: "{{ app_dir }}/.env"
-      register: env_file_stat
-
-    - name: Fail if .env is missing or unreadable
-      fail:
-        msg: "File {{ app_dir }}/.env not found or not readable!"
-      when: not (env_file_stat.stat.exists and env_file_stat.stat.readable)
-
-    - name: Ensure Docker and pip are installed
+    # 1. Cài Docker & pip trước khi sử dụng bất kỳ module docker nào
+    - name: Ensure Docker & pip are installed
       apt:
         name:
           - docker.io
           - python3-pip
         update_cache: yes
 
-    - name: Start and enable Docker service
-      service:
-        name: docker
-        state: started
-        enabled: yes
-
     - name: Install Docker SDK for Python
       pip:
         name: docker
 
+    # 2. Đăng nhập GHCR để pull image private
+    - name: Login to GitHub Container Registry
+      docker_login:
+        registry_url: ghcr.io
+        username: "{{ lookup('env','GITHUB_ACTOR') }}"
+        password: "{{ lookup('env','GITHUB_TOKEN') }}"
+
+    # 3. Kiểm tra .env
+    - name: Stat .env file
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/.env"
+      register: env_file_stat
+
+    - name: Fail if .env is missing or unreadable
+      ansible.builtin.fail:
+        msg: "File {{ app_dir }}/.env not found or not readable!"
+      when: not (env_file_stat.stat.exists and env_file_stat.stat.readable)
+
+    # 4. Xoá container cũ, pull và chạy lại
     - name: Remove existing backend container
       docker_container:
         name: backend
