@@ -1,3 +1,4 @@
+# .github/workflows/app-cicd.yml
 name: App CI/CD
 
 on:
@@ -29,47 +30,50 @@ jobs:
             code/backend
           docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
 
-    #   - name: Build & Push Frontend
-    #     run: |
-    #       docker build -f code/frontend/Dockerfile \
-    #         -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} \
-    #         code/frontend
-    #       docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
-
   deploy:
     needs: build_and_push
     runs-on: ubuntu-latest
     steps:
+      # 1) Checkout playbook Ansible
       - name: Checkout infra-ansible repo
         uses: actions/checkout@v3
         with:
           path: infra-ansible
 
+      # 2) Thiết lập SSH key
       - name: Setup SSH key
         run: |
-          mkdir -p keys
-          echo "${{ secrets.PROD_KEY }}" > keys/prod-key.pem
-          chmod 600 keys/prod-key.pem
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_KEY }}" > ~/.ssh/prod-key.pem
+          chmod 600 ~/.ssh/prod-key.pem
 
-      - name: Deploy ứng dụng qua Ansible
-        uses: dawidd6/action-ansible-playbook@v2
-        with:
-            # 1) Playbook bạn muốn chạy
-            playbook: infra-ansible/ansible/deploy.yml
+      # 3) Cài Ansible
+      - name: Install Ansible
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip openssh-client
+          pip3 install ansible
 
-            # 2) Inventory inline, có ProxyCommand cho bastion
-            inventory: |
-              [app]
-              ${{ secrets.SERVER_IP }}
+      # 4) Tạo inventory qua bastion
+      - name: Generate Ansible inventory
+        run: |
+          cat > infra-ansible/ansible/inventory.ini <<EOF
+          [app]
+          ${{ secrets.SERVER_IP }}
 
-              [app:vars]
-              ansible_user=ubuntu
-              # proxy qua bastion
-              ansible_ssh_common_args='-o ProxyCommand="ssh -i ~/.ssh/prod-key.pem -W %h:%p ubuntu@${{ secrets.BASTION_IP }}" -o StrictHostKeyChecking=no'
+          [app:vars]
+          ansible_user=ubuntu
+          ansible_ssh_private_key_file=~/.ssh/prod-key.pem
+          ansible_ssh_common_args='-o ProxyCommand="ssh -i ~/.ssh/prod-key.pem -W %h:%p ubuntu@${{ secrets.BASTION_IP }}" -o StrictHostKeyChecking=no'
+          EOF
 
-            # 3) Đường dẫn đến SSH key bạn vừa tạo
-            key: keys/prod-key.pem
-
-            # 4) Truyền extra-vars qua options
-            options: >-
-              --extra-vars "registry=ghcr.io/${{ github.repository }} image_tag=${{ needs.build_and_push.outputs.image_tag }}"
+      # 5) Chạy playbook deploy.yml
+      - name: Run Ansible deploy
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          ansible-playbook \
+            -i infra-ansible/ansible/inventory.ini \
+            infra-ansible/ansible/deploy.yml \
+            --private-key ~/.ssh/prod-key.pem \
+            --extra-vars "registry=ghcr.io/${{ github.repository }} image_tag=${{ needs.build_and_push.outputs.image_tag }}"
