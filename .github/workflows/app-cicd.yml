@@ -16,7 +16,8 @@ jobs:
     outputs:
       image_tag: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Login to GHCR
         run: |
@@ -34,7 +35,8 @@ jobs:
     needs: build_and_push
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout infra-ansible
+        uses: actions/checkout@v3
         with:
           path: infra-ansible
 
@@ -78,6 +80,8 @@ jobs:
       - name: Chạy Ansible deploy
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ansible-playbook \
             -i infra-ansible/ansible/inventory.ini \
