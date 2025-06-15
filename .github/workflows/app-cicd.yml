@@ -94,5 +94,5 @@ jobs:
                 -i infra-ansible/ansible/inventory.ini \
                 --private-key ~/.ssh/prod-key.pem \
                 -b \
-                --extra-vars "github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }} image_tag=${{ needs.build_and_push.outputs.image_tag }}" \
+                --extra-vars "registry=ghcr.io/${{ github.repository }} github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }} image_tag=${{ needs.build_and_push.outputs.image_tag }}" \
                 infra-ansible/ansible/deploy.yml

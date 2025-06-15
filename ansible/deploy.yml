@@ -6,12 +6,12 @@
 
   vars:
     app_dir: /opt/myapp
-    registry: "ghcr.io/{{ github_actor }}"
+    registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
 
   tasks:
-    - name: Docker login to GHCR (nếu image private, có thể xoá nếu public)
-      ansible.builtin.shell: |
+    - name: Docker login to GHCR
+      shell: |
         echo "{{ github_token }}" | docker login ghcr.io -u {{ github_actor }} --password-stdin
 
     - name: Pull backend image
