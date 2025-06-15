@@ -62,16 +62,18 @@ jobs:
           EOF
           chmod 600 ~/.ssh/config
 
-    #   - name: Cài Ansible
-    #     run: |
-    #       sudo apt-get update
-    #       sudo apt-get install -y python3-pip openssh-client
-    #       pip3 install ansible
-
       - name: Sinh inventory.ini
         run: |
           echo "[app]" > infra-ansible/ansible/inventory.ini
           echo "app-server" >> infra-ansible/ansible/inventory.ini
+
+      - name: Run Ansible bootstrap (tạo .env & chuẩn bị host)
+        run: |
+          ansible-playbook \
+            -i infra-ansible/ansible/inventory.ini \
+            --private-key ~/.ssh/prod-key.pem \
+            -b \
+            infra-ansible/ansible/bootstrap.yml
 
       - name: Chạy Ansible deploy
         env:
