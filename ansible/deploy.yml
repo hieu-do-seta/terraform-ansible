@@ -2,33 +2,24 @@
 - hosts: app
   become: yes
   vars:
-    app_dir: /opt/myapp
+    app_dir: /home/ubuntu/app        # Đổi từ /opt/myapp thành /home/ubuntu/app
     registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
 
   tasks:
-    # Debug: kiểm tra file .env
+    # 1. Kiểm tra file .env
     - name: Kiểm tra tồn tại file .env
       stat:
         path: "{{ app_dir }}/.env"
-      register: env_file_stat
+      register: env_file
 
-    - name: Hiển thị thông tin stat file
-      debug:
-        var: env_file_stat
+    - name: Báo lỗi nếu .env không tìm thấy
+      fail:
+        msg: "File {{ app_dir }}/.env không tồn tại trên server!"
+      when: not env_file.stat.exists
 
-    - name: Hiển thị nội dung file .env (nếu có)
-      command: cat "{{ app_dir }}/.env"
-      register: env_file_content
-      when: env_file_stat.stat.exists
-
-    - name: Hiển thị log nội dung .env
-      debug:
-        var: env_file_content.stdout_lines
-      when: env_file_stat.stat.exists
-
-    # Đảm bảo Docker & các tool đã cài
-    - name: Đảm bảo Docker & pip đã cài đặt
+    # 2. Đảm bảo Docker & pip đã cài
+    - name: Cài Docker và pip nếu chưa có
       apt:
         name:
           - docker.io
@@ -45,7 +36,7 @@
       pip:
         name: docker
 
-    # Pull image và chạy container
+    # 3. Xóa container cũ, kéo image mới
     - name: Xóa container backend cũ (nếu có)
       docker_container:
         name: backend
@@ -57,7 +48,7 @@
         tag: "{{ image_tag }}"
         source: pull
 
-    - name: Khởi backend container
+    - name: Chạy lại backend container
       docker_container:
         name: backend
         image: "{{ registry }}/backend:{{ image_tag }}"
@@ -79,7 +70,7 @@
         tag: "{{ image_tag }}"
         source: pull
 
-    - name: Khởi frontend container
+    - name: Chạy lại frontend container
       docker_container:
         name: frontend
         image: "{{ registry }}/frontend:{{ image_tag }}"
