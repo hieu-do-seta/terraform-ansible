@@ -34,41 +34,46 @@ jobs:
     needs: build_and_push
     runs-on: ubuntu-latest
     steps:
-      # 1) Checkout playbook Ansible
-      - name: Checkout infra-ansible repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           path: infra-ansible
 
-      # 2) Thiết lập SSH key
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.PROD_KEY }}" > ~/.ssh/prod-key.pem
           chmod 600 ~/.ssh/prod-key.pem
 
-      # 3) Cài Ansible
-      - name: Install Ansible
+      - name: Tạo SSH config với ProxyJump
+        run: |
+          cat >> ~/.ssh/config <<EOF
+          Host bastion
+            HostName ${{ secrets.BASTION_IP }}
+            User ubuntu
+            IdentityFile ~/.ssh/prod-key.pem
+            StrictHostKeyChecking no
+
+          Host app-server
+            HostName ${{ secrets.SERVER_IP }}
+            User ubuntu
+            IdentityFile ~/.ssh/prod-key.pem
+            ProxyJump bastion
+            StrictHostKeyChecking no
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Cài Ansible
         run: |
           sudo apt-get update
           sudo apt-get install -y python3-pip openssh-client
           pip3 install ansible
 
-      # 4) Tạo inventory qua bastion
-      - name: Generate Ansible inventory
+      - name: Sinh inventory.ini
         run: |
-          cat > infra-ansible/ansible/inventory.ini <<EOF
-          [app]
-          ${{ secrets.SERVER_IP }}
+          echo "[app]" > infra-ansible/ansible/inventory.ini
+          echo "app-server" >> infra-ansible/ansible/inventory.ini
 
-          [app:vars]
-          ansible_user=ubuntu
-          ansible_ssh_private_key_file=~/.ssh/prod-key.pem
-          ansible_ssh_common_args='-o ProxyCommand="ssh -i ~/.ssh/prod-key.pem -W %h:%p ubuntu@${{ secrets.BASTION_IP }}" -o StrictHostKeyChecking=no'
-          EOF
-
-      # 5) Chạy playbook deploy.yml
-      - name: Run Ansible deploy
+      - name: Chạy Ansible deploy
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
