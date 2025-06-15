@@ -18,6 +18,7 @@ const pool = new Pool({
 
 app.get('/api/hello', async (req, res) => {
     const result = await pool.query('SELECT NOW()');
+    console.log("connecting to database");
     res.json({ message: 'Hello from DB!', time: result.rows[0].now });
 });
 
