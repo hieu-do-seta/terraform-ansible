@@ -82,3 +82,5 @@ jobs:
             infra-ansible/ansible/deploy.yml \
             --private-key ~/.ssh/prod-key.pem \
             --extra-vars "registry=ghcr.io/${{ github.repository }} image_tag=${{ needs.build_and_push.outputs.image_tag }}"
+            -b
+        
