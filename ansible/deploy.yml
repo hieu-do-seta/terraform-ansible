@@ -11,14 +11,13 @@
     image_tag: "{{ image_tag }}"
 
   tasks:
-    - name: Pull backend image for amd64
+    - name: Pull backend image
       community.docker.docker_image:
         name: "{{ registry }}/backend"
         tag: "{{ image_tag }}"
         source: pull
-        platform: linux/amd64
 
-    - name: Run backend container for amd64
+    - name: Run backend container
       community.docker.docker_container:
         name: backend
         image: "{{ registry }}/backend:{{ image_tag }}"
@@ -27,16 +26,15 @@
           - "3000:3000"
         recreate: yes
         restart_policy: unless-stopped
-        platform: linux/amd64
 
-    # - name: Pull frontend image for amd64
+    # (tuỳ chọn) Thêm frontend tương tự nếu có
+    # - name: Pull frontend image
     #   community.docker.docker_image:
     #     name: "{{ registry }}/frontend"
     #     tag: "{{ image_tag }}"
     #     source: pull
-    #     platform: linux/amd64
 
-    # - name: Run frontend container for amd64
+    # - name: Run frontend container
     #   community.docker.docker_container:
     #     name: frontend
     #     image: "{{ registry }}/frontend:{{ image_tag }}"
@@ -45,4 +43,3 @@
     #       - "80:80"
     #     recreate: yes
     #     restart_policy: unless-stopped
-    #     platform: linux/amd64
