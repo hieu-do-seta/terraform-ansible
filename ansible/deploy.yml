@@ -56,24 +56,24 @@
         state: started
         restart_policy: unless-stopped
 
-    - name: Remove existing frontend container
-      docker_container:
-        name: frontend
-        state: absent
+    # - name: Remove existing frontend container
+    #   docker_container:
+    #     name: frontend
+    #     state: absent
 
-    - name: Pull frontend image
-      docker_image:
-        name: "{{ registry }}/frontend"
-        tag: "{{ image_tag }}"
-        source: pull
+    # - name: Pull frontend image
+    #   docker_image:
+    #     name: "{{ registry }}/frontend"
+    #     tag: "{{ image_tag }}"
+    #     source: pull
 
-    - name: Run frontend container
-      docker_container:
-        name: frontend
-        image: "{{ registry }}/frontend:{{ image_tag }}"
-        env_file: "{{ app_dir }}/.env"
-        ports:
-          - "80:80"
-        recreate: yes
-        state: started
-        restart_policy: unless-stopped
+    # - name: Run frontend container
+    #   docker_container:
+    #     name: frontend
+    #     image: "{{ registry }}/frontend:{{ image_tag }}"
+    #     env_file: "{{ app_dir }}/.env"
+    #     ports:
+    #       - "80:80"
+    #     recreate: yes
+    #     state: started
+    #     restart_policy: unless-stopped
