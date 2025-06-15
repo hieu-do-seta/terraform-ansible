@@ -2,7 +2,11 @@ version: '3.8'
 
 services:
   backend:
-    build: .
+    platform: linux/arm64/v8       # <-- ép platform
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platform: linux/arm64/v8     # <-- ép platform khi build
     ports:
       - "${PORT}:${PORT}"
     env_file:
