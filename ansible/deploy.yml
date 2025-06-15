@@ -7,7 +7,6 @@
     image_tag: "{{ image_tag }}"
 
   tasks:
-    # 1. Cài Docker & pip
     - name: Ensure Docker & pip are installed
       apt:
         name:
@@ -19,14 +18,12 @@
       pip:
         name: docker
 
-    # 2. Login GHCR
     - name: Login to GitHub Container Registry
       docker_login:
         registry_url: ghcr.io
         username: "{{ lookup('env','GITHUB_ACTOR') }}"
         password: "{{ lookup('env','GITHUB_TOKEN') }}"
 
-    # 3. Kiểm tra .env
     - name: Stat .env file
       stat:
         path: "{{ app_dir }}/.env"
@@ -37,46 +34,42 @@
         msg: "File {{ app_dir }}/.env not found or not readable!"
       when: not (env_file_stat.stat.exists and env_file_stat.stat.readable)
 
-    # 4. Backend: pull, remove cũ, run mới
     - name: Pull backend image (amd64)
-      ansible.builtin.command:
-        cmd: docker pull --platform linux/amd64 {{ registry }}/backend:{{ image_tag }}
+      shell: docker pull --platform linux/amd64 {{ registry }}/backend:{{ image_tag }}
+      args:
         warn: false
 
     - name: Remove existing backend container (ignore if none)
-      ansible.builtin.command:
-        cmd: docker rm -f backend
+      shell: docker rm -f backend
       ignore_errors: true
 
     - name: Run backend container (amd64)
-      ansible.builtin.command:
-        cmd: >
-          docker run -d
-            --platform linux/amd64
-            --name backend
-            --env-file {{ app_dir }}/.env
-            -p 3000:3000
-            {{ registry }}/backend:{{ image_tag }}
+      shell: >
+        docker run -d
+          --platform linux/amd64
+          --name backend
+          --env-file {{ app_dir }}/.env
+          -p 3000:3000
+          {{ registry }}/backend:{{ image_tag }}
+      args:
         warn: false
 
-    # # 5. Frontend: pull, remove cũ, run mới
     # - name: Pull frontend image (amd64)
-    #   ansible.builtin.command:
-    #     cmd: docker pull --platform linux/amd64 {{ registry }}/frontend:{{ image_tag }}
+    #   shell: docker pull --platform linux/amd64 {{ registry }}/frontend:{{ image_tag }}
+    #   args:
     #     warn: false
 
     # - name: Remove existing frontend container (ignore if none)
-    #   ansible.builtin.command:
-    #     cmd: docker rm -f frontend
+    #   shell: docker rm -f frontend
     #   ignore_errors: true
 
     # - name: Run frontend container (amd64)
-    #   ansible.builtin.command:
-    #     cmd: >
-    #       docker run -d
-    #         --platform linux/amd64
-    #         --name frontend
-    #         --env-file {{ app_dir }}/.env
-    #         -p 80:80
-    #         {{ registry }}/frontend:{{ image_tag }}
+    #   shell: >
+    #     docker run -d
+    #       --platform linux/amd64
+    #       --name frontend
+    #       --env-file {{ app_dir }}/.env
+    #       -p 80:80
+    #       {{ registry }}/frontend:{{ image_tag }}
+    #   args:
     #     warn: false
