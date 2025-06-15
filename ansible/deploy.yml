@@ -58,9 +58,12 @@
       community.docker.docker_container:
         name: frontend
         image: "{{ registry }}/frontend:{{ image_tag }}"
-        ports:
-          - "80:80"
         volumes:
           - /var/www/html:/usr/share/nginx/html
+        state: started
+        # ports:
+        #   - "80:80"
+        # volumes:
+        #   - /var/www/html:/usr/share/nginx/html
         restart_policy: unless-stopped
         recreate: yes
