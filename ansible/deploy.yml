@@ -7,15 +7,15 @@
     image_tag: "{{ image_tag }}"
 
   tasks:
-    # DEBUG: show which user
+    # DEBUG: show which user and become_user is running tasks
     - name: DEBUG | Who am I
       debug:
         msg:
-          - "remote_user: {{ ansible_user_id }}"
-          - "become_user: {{ ansible_become_user }}"
-          - "env_USER: {{ ansible_env.USER }}"
+          - "ansible_user: {{ ansible_user }}"
+          - "ansible_become_user: {{ ansible_become_user }}"
+          - "ansible_effective_user_id: {{ ansible_user_id }}"
 
-    # DEBUG: list app directory and permissions app directory and permissions
+    # DEBUG: list app directory and permissions
     - name: DEBUG | List /opt/myapp contents
       ansible.builtin.shell: ls -lah {{ app_dir }}
       register: dir_listing
@@ -25,29 +25,15 @@
 
     # DEBUG: stat file with detailed attributes
     - name: DEBUG | Stat .env file attributes
-  ansible.builtin.stat:
-    path: "{{ app_dir }}/.env"
-    get_attributes: true
-  register: env_stat
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/.env"
+        get_attributes: true
+      register: env_stat
 
-- debug:
-    var: env_stat
+    - debug:
+        var: env_stat
 
-- name: DEBUG | Show docker.sock permissions
-  ansible.builtin.shell: ls -lah /var/run/docker.sock
-  register: sock_stat
-
-- debug:
-    var: sock_stat.stdout_lines
-
-- name: DEBUG | Show user/group membership
-  ansible.builtin.shell: id
-  register: id_info
-
-- debug:
-    var: id_info.stdout_lines
-
-- name: Check for .env file existence
+    - name: Check for .env file existence
       stat:
         path: "{{ app_dir }}/.env"
       register: env_file_stat
