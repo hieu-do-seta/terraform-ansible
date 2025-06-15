@@ -8,19 +8,97 @@
     app_dir: /opt/myapp
     registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
+    github_actor: "{{ github_actor }}"
+    github_token: "{{ github_token }}"
 
   tasks:
-    - name: Docker login to GHCR
-      shell: |
-        echo "{{ github_token }}" | docker login ghcr.io -u {{ github_actor }} --password-stdin
+    - name: DEBUG | Show all vars
+      debug:
+        var:
+          - registry
+          - image_tag
+          - github_actor
+          - github_token
+          - ansible_user
+          - ansible_become_user
+          - ansible_effective_user_id
 
-    - name: Pull backend image
+    - name: DEBUG | Show Ansible version
+      ansible.builtin.command: ansible --version
+      register: ansible_version
+    - debug: var=ansible_version.stdout_lines
+
+    - name: DEBUG | Docker version & info
+      ansible.builtin.shell: |
+        docker version
+        docker info
+      register: docker_info
+    - debug: var=docker_info.stdout_lines
+
+    - name: Ensure Docker & pip are installed
+      apt:
+        name:
+          - docker.io
+          - python3-pip
+        update_cache: yes
+
+    - name: Install Docker SDK for Python
+      pip:
+        name: docker
+
+    - name: Docker login to GHCR
+      docker_login:
+        registry_url: ghcr.io
+        username: "{{ github_actor }}"
+        password: "{{ github_token }}"
+
+    - name: DEBUG | Show Docker credentials (docker-credential-secretservice lookup)
+      ansible.builtin.shell: docker-credential-secretservice list
+      register: cred_list
+      ignore_errors: true
+    - debug: var=cred_list.stdout_lines
+
+    - name: Stat .env file
+      stat:
+        path: "{{ app_dir }}/.env"
+      register: env_stat
+    - debug: var=env_stat
+
+    - name: Fail if .env is missing or unreadable
+      fail:
+        msg: "File {{ app_dir }}/.env not found or not readable!"
+      when: not (env_stat.stat.exists and env_stat.stat.readable)
+
+    # --- Backend ---
+    - name: DEBUG | List images before pull
+      ansible.builtin.shell: docker images --format '{{ "{{.Repository}}:{{.Tag}}" }}'
+      register: before_images
+    - debug: var=before_images.stdout_lines
+
+    - name: Pull backend image (multi-arch)
       community.docker.docker_image:
         name: "{{ registry }}/backend"
         tag: "{{ image_tag }}"
         source: pull
 
-    - name: Run backend container
+    - name: DEBUG | List images after pull
+      ansible.builtin.shell: docker images --format '{{ "{{.Repository}}:{{.Tag}}" }}'
+      register: after_images
+    - debug: var=after_images.stdout_lines
+
+    - name: Pull manifest inspect
+      ansible.builtin.shell: docker manifest inspect {{ registry }}/backend:{{ image_tag }} | grep -A2 "manifests"
+      register: manifest_info
+      ignore_errors: true
+    - debug: var=manifest_info.stdout_lines
+
+    - name: Remove existing backend container (if any)
+      community.docker.docker_container:
+        name: backend
+        state: absent
+      ignore_errors: true
+
+    - name: Run backend container (multi-arch)
       community.docker.docker_container:
         name: backend
         image: "{{ registry }}/backend:{{ image_tag }}"
@@ -29,3 +107,30 @@
           - "3000:3000"
         recreate: yes
         restart_policy: unless-stopped
+
+    - name: DEBUG | docker ps -a after backend run
+      ansible.builtin.shell: docker ps -a --format '{{ "{{.Names}} {{.Status}}" }}'
+      register: ps_after_backend
+    - debug: var=ps_after_backend.stdout_lines
+
+    # --- Frontend (tương tự nếu có) ---
+    - name: Pull frontend image
+      community.docker.docker_image:
+        name: "{{ registry }}/frontend"
+        tag: "{{ image_tag }}"
+        source: pull
+
+    - name: Run frontend container
+      community.docker.docker_container:
+        name: frontend
+        image: "{{ registry }}/frontend:{{ image_tag }}"
+        env_file: "{{ app_dir }}/.env"
+        ports:
+          - "80:80"
+        recreate: yes
+        restart_policy: unless-stopped
+
+    - name: DEBUG | docker ps -a final
+      ansible.builtin.shell: docker ps -a --format '{{ "{{.Names}} {{.Status}}" }}'
+      register: ps_final
+    - debug: var=ps_final.stdout_lines
