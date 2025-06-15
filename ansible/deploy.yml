@@ -2,42 +2,39 @@
 - hosts: app
   become: yes
   vars:
-    app_dir: /opt/myapp        # Giữ nguyên với đường dẫn bootstrap
+    app_dir: /opt/myapp
     registry: "{{ registry }}"
     image_tag: "{{ image_tag }}"
 
   tasks:
-    # 1. Kiểm tra file .env
-    - name: Kiểm tra tồn tại file .env
+    - name: Check for .env file existence
       stat:
         path: "{{ app_dir }}/.env"
-      register: env_file
+      register: env_file_stat
 
-    - name: Báo lỗi nếu .env không tìm thấy
+    - name: Fail if .env is missing
       fail:
-        msg: "File {{ app_dir }}/.env không tồn tại trên server!"
-      when: not env_file.stat.exists
+        msg: "File {{ app_dir }}/.env not found!"
+      when: not env_file_stat.stat.exists
 
-    # 2. Đảm bảo Docker & pip đã cài
-    - name: Cài Docker và pip nếu chưa có
+    - name: Ensure Docker and pip are installed
       apt:
         name:
           - docker.io
           - python3-pip
         update_cache: yes
 
-    - name: Đảm bảo Docker service đang chạy
+    - name: Start and enable Docker service
       service:
         name: docker
         state: started
         enabled: yes
 
-    - name: Cài Docker SDK cho Python
+    - name: Install Docker SDK for Python
       pip:
         name: docker
 
-    # 3. Xóa container cũ, kéo image mới và khởi container
-    - name: Xóa container backend cũ (nếu có)
+    - name: Remove existing backend container
       docker_container:
         name: backend
         state: absent
@@ -48,18 +45,18 @@
         tag: "{{ image_tag }}"
         source: pull
 
-    - name: Chạy lại backend container
+    - name: Run backend container
       docker_container:
         name: backend
         image: "{{ registry }}/backend:{{ image_tag }}"
         env_file: "{{ app_dir }}/.env"
         ports:
           - "3000:3000"
+        recreate: yes
         state: started
         restart_policy: unless-stopped
-        recreate: yes
 
-    - name: Xóa container frontend cũ (nếu có)
+    - name: Remove existing frontend container
       docker_container:
         name: frontend
         state: absent
@@ -70,13 +67,13 @@
         tag: "{{ image_tag }}"
         source: pull
 
-    - name: Chạy lại frontend container
+    - name: Run frontend container
       docker_container:
         name: frontend
         image: "{{ registry }}/frontend:{{ image_tag }}"
         env_file: "{{ app_dir }}/.env"
         ports:
           - "80:80"
+        recreate: yes
         state: started
         restart_policy: unless-stopped
-        recreate: yes
