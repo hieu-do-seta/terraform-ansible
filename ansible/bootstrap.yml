@@ -2,7 +2,7 @@
 - hosts: app
   become: yes
   vars_files:
-    - group_vars/all.yml     # hoặc vars/bootstrap_vars.yml
+    - group_vars/all.yml     # Hoặc vars/bootstrap_vars.yml
 
   vars:
     app_dir: /opt/myapp
@@ -15,6 +15,12 @@
           - python3-pip
         update_cache: yes
 
+    - name: Đảm bảo Docker service đang chạy
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
     - name: Cài Docker SDK cho Python
       pip:
         name: docker
@@ -24,7 +30,6 @@
         url: "https://github.com/docker/compose/releases/latest/download/docker-compose-{{ ansible_system }}-{{ ansible_machine }}"
         dest: /usr/local/bin/docker-compose
         mode: '0755'
-
 
     - name: Tạo thư mục app
       file:
