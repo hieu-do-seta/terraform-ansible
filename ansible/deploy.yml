@@ -7,6 +7,32 @@
     image_tag: "{{ image_tag }}"
 
   tasks:
+    # DEBUG: show which user and become_user is running tasks
+    - name: DEBUG | Who am I
+      debug:
+        msg:
+          - "ansible_user: {{ ansible_user }}"
+          - "ansible_become_user: {{ ansible_become_user }}"
+          - "ansible_effective_user_id: {{ ansible_user_id }}"
+
+    # DEBUG: list app directory and permissions
+    - name: DEBUG | List /opt/myapp contents
+      ansible.builtin.shell: ls -lah {{ app_dir }}
+      register: dir_listing
+
+    - debug:
+        var: dir_listing.stdout_lines
+
+    # DEBUG: stat file with detailed attributes
+    - name: DEBUG | Stat .env file attributes
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/.env"
+        get_attributes: true
+      register: env_stat
+
+    - debug:
+        var: env_stat
+
     - name: Check for .env file existence
       stat:
         path: "{{ app_dir }}/.env"
@@ -14,8 +40,8 @@
 
     - name: Fail if .env is missing
       fail:
-        msg: "File {{ app_dir }}/.env not found!"
-      when: not env_file_stat.stat.exists
+        msg: "File {{ app_dir }}/.env not found or not readable!"
+      when: not (env_file_stat.stat.exists and env_file_stat.stat.readable)
 
     - name: Ensure Docker and pip are installed
       apt:
