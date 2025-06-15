@@ -34,6 +34,10 @@ jobs:
             -t ghcr.io/${{ github.repository_owner }}/backend:${{ github.sha }} \
             code/backend \
             --push
+      - name: Build & Push Frontend
+        run: |
+          docker build -f code/frontend/Dockerfile -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} code/frontend
+          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
 
   deploy:
     needs: build_and_push
@@ -65,6 +69,11 @@ jobs:
             IdentityFile ~/.ssh/prod-key.pem
             ProxyJump bastion
             StrictHostKeyChecking no
+          Host frontend-server
+            HostName ${{ secrets.FRONTEND_IP }}
+            User ubuntu
+            IdentityFile ~/.ssh/prod-key.pem
+            StrictHostKeyChecking no
           EOF
           chmod 600 ~/.ssh/config
 
@@ -72,6 +81,9 @@ jobs:
         run: |
           echo "[app]" > infra-ansible/ansible/inventory.ini
           echo "app-server" >> infra-ansible/ansible/inventory.ini
+
+          echo "[frontend]" >> infra-ansible/ansible/inventory.ini
+          echo "frontend-server" >> infra-ansible/ansible/inventory.ini
 
       - name: Run Ansible bootstrap (tạo .env & chuẩn bị host)
         run: |
