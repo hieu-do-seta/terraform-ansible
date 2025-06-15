@@ -2,7 +2,23 @@
   become: yes
   vars:
     app_dir: /opt/myapp
+  tasks:
+    - name: Đảm bảo Docker & pip được cài
+      apt:
+        name:
+          - docker.io
+          - python3-pip
+        update_cache: yes
 
+    - name: Đảm bảo Docker service đang chạy
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Cài Docker SDK cho Python
+      pip:
+        name: docker
   tasks:
     - name: Pull backend image
       docker_image:
