@@ -21,6 +21,10 @@ app.get('/api/hello', async (req, res) => {
     console.log("connecting to database");
     res.json({ message: 'Hello from DB!', time: result.rows[0].now });
 });
+app.get('/api/health', async (req, res) => {
+
+    res.json({ message: 'Alive' });
+});
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
