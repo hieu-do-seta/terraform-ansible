@@ -8,18 +8,36 @@
 
 <body>
     <h1>Welcome to Demo Frontend</h1>
-    <div id="message">Loading...</div>
+
+    <div id="hello-message">Loading hello...</div>
+    <div id="health-message">Loading health...</div>
 
     <script>
+        // Gọi API /api/hello
         fetch('/api/hello')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('message').innerText = data.message + " @ " + data.time;
+                document.getElementById('hello-message').innerText =
+                    '[Hello] ' + data.message + " @ " + data.time;
             })
             .catch(error => {
-                document.getElementById('message').innerText = 'Error loading API';
+                document.getElementById('hello-message').innerText =
+                    'Error loading /api/hello: ' + error.message;
+            });
+
+        // Gọi API /api/health
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('health-message').innerText =
+                    '[Health] Status: ' + data.status + " @ " + data.time;
+            })
+            .catch(error => {
+                document.getElementById('health-message').innerText =
+                    'Error loading /api/health: ' + error.message;
             });
     </script>
+
     <div>Hello</div>
 </body>
 
