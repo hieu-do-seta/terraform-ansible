@@ -12,31 +12,51 @@
     <div id="hello-message">Loading hello...</div>
     <div id="health-message">Loading health...</div>
 
-    <script>
-        // Gọi API /api/hello
-        fetch('/api/hello')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('hello-message').innerText =
-                    '[Hello] ' + data.message + " @ " + data.time;
-            })
-            .catch(error => {
-                document.getElementById('hello-message').innerText =
-                    'Error loading /api/hello: ' + error.message;
-            });
+    <!DOCTYPE html>
+<html lang="vi">
 
-        // Gọi API /api/health
-        fetch('/api/health')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('health-message').innerText =
-                    '[Health] ' + data.message;
-            })
-            .catch(error => {
-                document.getElementById('health-message').innerText =
-                    'Error loading /api/health: ' + error.message;
-            });
-    </script>
+<head>
+    <meta charset="UTF-8" />
+    <title>Demo Frontend</title>
+</head>
+
+<body>
+    <h1>Welcome to Demo Frontend</h1>
+
+    <div id="hello-message">Loading hello...</div>
+    <div id="health-message">Loading health...</div>
+
+    <script>
+            // Gọi API /api/hello (giữ nguyên logic ban đầu)
+            fetch('/api/hello')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('hello-message').innerText =
+                        data.message + " @ " + data.time;
+                })
+                .catch(error => {
+                    document.getElementById('hello-message').innerText =
+                        'Error loading /api/hello: ' + error.message;
+                });
+
+            // Gọi API /api/health (chỉ hiển thị message)
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('health-message').innerText =
+                        data.message;
+                })
+                .catch(error => {
+                    document.getElementById('health-message').innerText =
+                        'Error loading /api/health: ' + error.message;
+                });
+        </script>
+
+        <div>Hello</div>
+    </body>
+
+    </html>
+
 
 
     <div>Hello</div>
