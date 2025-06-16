@@ -30,13 +30,14 @@
             .then(response => response.json())
             .then(data => {
                 document.getElementById('health-message').innerText =
-                    '[Health] Status: ' + data.status + " @ " + data.time;
+                    '[Health] ' + data.message;
             })
             .catch(error => {
                 document.getElementById('health-message').innerText =
                     'Error loading /api/health: ' + error.message;
             });
     </script>
+
 
     <div>Hello</div>
 </body>
