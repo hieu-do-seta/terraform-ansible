@@ -91,13 +91,13 @@ jobs:
           echo "[frontend]" >> infra-ansible/ansible/inventory.ini
           echo "frontend-server" >> infra-ansible/ansible/inventory.ini
 
-      - name: Run Ansible bootstrap (tạo .env & chuẩn bị host)
-        run: |
-          ansible-playbook \
-            -i infra-ansible/ansible/inventory.ini \
-            --private-key ~/.ssh/prod-key.pem \
-            -b \
-            infra-ansible/ansible/bootstrap.yml
+    #   - name: Run Ansible bootstrap (tạo .env & chuẩn bị host)
+    #     run: |
+    #       ansible-playbook \
+    #         -i infra-ansible/ansible/inventory.ini \
+    #         --private-key ~/.ssh/prod-key.pem \
+    #         -b \
+    #         infra-ansible/ansible/bootstrap.yml
 
       - name: Chạy Ansible deploy
         env:
