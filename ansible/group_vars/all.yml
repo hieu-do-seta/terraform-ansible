@@ -1,4 +1,4 @@
-db_endpoint: terraform-20250617071323995200000006.cb82uwm0ea5g.ap-northeast-1.rds.amazonaws.com
+db_endpoint: terraform-20250621094153216300000004.cb82uwm0ea5g.ap-northeast-1.rds.amazonaws.com
 db_port: 3000
 db_user: prod_db_user
 db_password: ProdDbStrongPassword123!
