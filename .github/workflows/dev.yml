@@ -53,6 +53,7 @@ jobs:
   deploy:
     needs: build_and_push
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout infra-ansible
         uses: actions/checkout@v3
