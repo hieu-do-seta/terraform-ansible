@@ -1,0 +1,29 @@
+---
+- name: Cài Docker & pip
+  apt:
+    name:
+      - docker.io
+      - python3-pip
+    update_cache: yes
+
+- name: Đảm bảo Docker service đang chạy
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Thêm user ubuntu vào group docker
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+- name: Cài Docker SDK cho Python
+  pip:
+    name: docker
+
+- name: Cài docker-compose
+  get_url:
+    url: "https://github.com/docker/compose/releases/latest/download/docker-compose-{{ ansible_system }}-{{ ansible_machine }}"
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'

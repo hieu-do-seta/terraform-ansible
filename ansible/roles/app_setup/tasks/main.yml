@@ -1,0 +1,15 @@
+---
+- name: Tạo thư mục app nếu là app group
+  file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: ubuntu
+    mode: '0755'
+  when: "'app' in group_names"
+
+- name: Tạo file .env nếu là app group
+  template:
+    src: env.j2
+    dest: "{{ app_dir }}/.env"
+    mode: '0600'
+  when: "'app' in group_names"
