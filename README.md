@@ -40,9 +40,5 @@ Vào **Repository > Settings > Secrets and variables > Actions**, thêm các sec
 | `SERVER_IP`      | Private IP của EC2 backend                  |
 | `FRONTEND_IP`    | Public IP của EC2 frontend                  |
 
-> 💡 Mẹo: để copy SSH key nhanh:
-> ```bash
-> cat keys/prod-key.pem | pbcopy  # macOS
-> ```
 
 Khi bạn push code lên nhánh `main`, hệ thống CI/CD sẽ tự động(hoặc rerun actions)
