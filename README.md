@@ -1,5 +1,3 @@
-# terraform-ansible
-# terraform-ansible
 # Triển khai hạ tầng và cấu hình server bằng Terraform & Ansible
 
 Dự án này giúp bạn triển khai hạ tầng EC2, RDS... bằng Terraform, sau đó cấu hình các máy chủ bằng Ansible một cách tự động.
