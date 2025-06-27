@@ -37,7 +37,7 @@ jobs:
 
       - name: Build & Push Frontend
         run: |
-            docker buildx build \
+          docker buildx build \
             --platform linux/amd64,linux/arm64 \
             -t ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }} \
             -f code/frontend/Dockerfile \
@@ -48,56 +48,65 @@ jobs:
     needs: build_and_push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout infra-ansible
+      - name: Checkout (needed for actions/ssh-agent)
         uses: actions/checkout@v3
-        with:
-          path: infra-ansible
 
-      - name: Setup SSH key
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.8.1
+        with:
+          ssh-private-key: ${{ secrets.PROD_KEY }}
+
+      - name: Create SSH config with ProxyJump
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.PROD_KEY }}" > ~/.ssh/prod-key.pem
-          chmod 600 ~/.ssh/prod-key.pem
-
-      - name: Tạo SSH config với ProxyJump
-        run: |
-          cat >> ~/.ssh/config <<EOF
+          cat > ~/.ssh/config <<EOF
           Host bastion
             HostName ${{ secrets.BASTION_IP }}
             User ubuntu
-            IdentityFile ~/.ssh/prod-key.pem
+            IdentityFile ~/.ssh/id_rsa
             StrictHostKeyChecking no
 
           Host app-server
             HostName ${{ secrets.SERVER_IP }}
             User ubuntu
-            IdentityFile ~/.ssh/prod-key.pem
+            IdentityFile ~/.ssh/id_rsa
             ProxyJump bastion
             StrictHostKeyChecking no
 
           Host frontend-server
             HostName ${{ secrets.FRONTEND_IP }}
             User ubuntu
-            IdentityFile ~/.ssh/prod-key.pem
+            IdentityFile ~/.ssh/id_rsa
+            ProxyJump bastion
             StrictHostKeyChecking no
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Sinh inventory.ini
+      - name: Deploy Backend via SSH
         run: |
-          echo "[app]" > infra-ansible/ansible/inventory.ini
-          echo "app-server" >> infra-ansible/ansible/inventory.ini
-          echo "" >> infra-ansible/ansible/inventory.ini
-          echo "[frontend]" >> infra-ansible/ansible/inventory.ini
-          echo "frontend-server" >> infra-ansible/ansible/inventory.ini
+          ssh app-server << 'EOF'
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            docker pull ghcr.io/${{ github.repository_owner }}/backend:${{ needs.build_and_push.outputs.image_tag }}
+            docker stop backend || true
+            docker rm backend || true
+            docker run -d \
+              --name backend \
+              --env-file /opt/myapp/.env \
+              -p 3000:3000 \
+              --restart unless-stopped \
+              ghcr.io/${{ github.repository_owner }}/backend:${{ needs.build_and_push.outputs.image_tag }}
+          EOF
 
-      - name: Chạy Ansible deploy
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
+      - name: Deploy Frontend via SSH
         run: |
-          ansible-playbook \
-            -i infra-ansible/ansible/inventory.ini \
-            --private-key ~/.ssh/prod-key.pem \
-            -b \
-            --extra-vars "registry=ghcr.io/${{ github.repository_owner }} image_tag=${{ needs.build_and_push.outputs.image_tag }} github_actor=${{ github.actor }} github_token=${{ secrets.GITHUB_TOKEN }}" \
-            infra-ansible/ansible/deploy.yml
+          ssh frontend-server << 'EOF'
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            docker pull ghcr.io/${{ github.repository_owner }}/frontend:${{ needs.build_and_push.outputs.image_tag }}
+            docker stop frontend || true
+            docker rm frontend || true
+            docker run -d \
+              --name frontend \
+              -p 8080:80 \
+              --restart unless-stopped \
+              ghcr.io/${{ github.repository_owner }}/frontend:${{ needs.build_and_push.outputs.image_tag }}
+          EOF
