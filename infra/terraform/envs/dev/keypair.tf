@@ -11,7 +11,7 @@ resource "aws_key_pair" "generated_key_dev" {
 
 resource "local_file" "private_key_pem_dev" {
   content         = tls_private_key.ssh_key_dev.private_key_pem
-  filename        = abspath("${path.module}/../../keys/${var.key_name}.pem")
+  filename        = abspath("${path.module}/../../../../keys/${var.key_name}.pem")
   file_permission = "0400"
 }
 

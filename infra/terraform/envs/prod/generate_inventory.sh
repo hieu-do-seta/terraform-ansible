@@ -4,7 +4,7 @@ APP_IP=$(terraform output -raw prod_api_private_ip)
 FRONTEND_IP=$(terraform output -raw prod_web_public_ip)
 BASTION_IP=$(terraform output -raw prod_bastion_public_ip)
 
-TARGET_PATH="../../ansible/envs/prod/inventory.ini"
+TARGET_PATH="../../../ansible/envs/prod/inventory.ini"
 mkdir -p "$(dirname "$TARGET_PATH")"
 
 cat <<EOF > "$TARGET_PATH"

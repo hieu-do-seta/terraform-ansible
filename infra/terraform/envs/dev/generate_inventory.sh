@@ -6,7 +6,7 @@ FRONTEND_IP=$(terraform output -raw dev_web_public_ip)
 BASTION_IP=$(terraform output -raw dev_bastion_public_ip)
 
 # === Đường dẫn tới inventory.ini cần tạo ===
-TARGET_PATH="../../ansible/envs/dev/inventory.ini"
+TARGET_PATH="../../../ansible/envs/dev/inventory.ini"
 mkdir -p "$(dirname "$TARGET_PATH")"
 
 # === Ghi nội dung vào inventory.ini ===
