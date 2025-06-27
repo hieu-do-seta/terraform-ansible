@@ -62,7 +62,7 @@ resource "aws_instance" "api" {
   vpc_security_group_ids = [var.api_sg_id]
   key_name               = var.key_name
   associate_public_ip_address = false
-  user_data              = file("${path.module}/api_user_data.sh")
+  # user_data              = file("${path.module}/api_user_data.sh")
   tags = {
     Name = "${var.environment}-backend-api"
   }
