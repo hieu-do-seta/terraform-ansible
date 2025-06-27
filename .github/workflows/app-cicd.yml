@@ -48,7 +48,7 @@ jobs:
     needs: build_and_push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (needed for actions/ssh-agent)
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Start SSH agent
@@ -84,12 +84,16 @@ jobs:
 
       - name: Deploy Backend via SSH
         run: |
-          ssh app-server << 'EOF'
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            docker pull ghcr.io/${{ github.repository_owner }}/backend:${{ needs.build_and_push.outputs.image_tag }}
-            docker stop backend || true
-            docker rm backend || true
-            docker run -d \
+          ssh -t app-server << 'EOF'
+            # đảm bảo .env có thể đọc
+            sudo chmod 644 /opt/myapp/.env || true
+
+            # login, pull, recreate container với sudo
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            sudo docker pull ghcr.io/${{ github.repository_owner }}/backend:${{ needs.build_and_push.outputs.image_tag }}
+            sudo docker stop backend    || true
+            sudo docker rm  backend    || true
+            sudo docker run -d \
               --name backend \
               --env-file /opt/myapp/.env \
               -p 3000:3000 \
@@ -99,12 +103,13 @@ jobs:
 
       - name: Deploy Frontend via SSH
         run: |
-          ssh frontend-server << 'EOF'
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            docker pull ghcr.io/${{ github.repository_owner }}/frontend:${{ needs.build_and_push.outputs.image_tag }}
-            docker stop frontend || true
-            docker rm frontend || true
-            docker run -d \
+          ssh -t frontend-server << 'EOF'
+            sudo chmod 644 /opt/myapp/.env || true
+            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            sudo docker pull ghcr.io/${{ github.repository_owner }}/frontend:${{ needs.build_and_push.outputs.image_tag }}
+            sudo docker stop frontend  || true
+            sudo docker rm  frontend  || true
+            sudo docker run -d \
               --name frontend \
               -p 8080:80 \
               --restart unless-stopped \
