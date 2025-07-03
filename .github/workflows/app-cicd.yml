@@ -69,7 +69,7 @@ jobs:
             StrictHostKeyChecking no
 
           Host backend-server
-            HostName ${{ secrets.BACKEND_PRIVATE_IP }}
+            HostName ${{ secrets.SERVER_IP }}
             User ubuntu
             IdentityFile ~/.ssh/id_rsa
             ProxyJump bastion
