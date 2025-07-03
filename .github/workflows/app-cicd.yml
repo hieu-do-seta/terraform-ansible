@@ -1,4 +1,4 @@
-name: App CI/CD
+name: App CI/CD (ECR + Bastion)
 
 on:
   push:
@@ -6,57 +6,59 @@ on:
       - main
 
 permissions:
+  id-token: write
   contents: read
-  packages: write
 
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ github.sha }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to GHCR
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Backend
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-      - name: Build & Push Backend (arm64)
-        run: |
+          docker buildx create --use
           docker buildx build \
             --platform linux/arm64 \
             -f code/backend/Dockerfile \
-            -t ghcr.io/${{ github.repository_owner }}/backend:${{ github.sha }} \
+            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:${{ github.sha }} \
             code/backend \
             --push
 
       - name: Build & Push Frontend
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            -t ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }} \
+            --platform linux/amd64 \
             -f code/frontend/Dockerfile \
+            -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:${{ github.sha }} \
             code/frontend \
             --push
 
   deploy:
     needs: build_and_push
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Start SSH agent
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Start SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.PROD_KEY }}
 
-      - name: Create SSH config with ProxyJump
+      - name: Set up SSH config
         run: |
           mkdir -p ~/.ssh
           cat > ~/.ssh/config <<EOF
@@ -66,8 +68,8 @@ jobs:
             IdentityFile ~/.ssh/id_rsa
             StrictHostKeyChecking no
 
-          Host app-server
-            HostName ${{ secrets.SERVER_IP }}
+          Host backend-server
+            HostName ${{ secrets.BACKEND_PRIVATE_IP }}
             User ubuntu
             IdentityFile ~/.ssh/id_rsa
             ProxyJump bastion
@@ -77,41 +79,43 @@ jobs:
             HostName ${{ secrets.FRONTEND_IP }}
             User ubuntu
             IdentityFile ~/.ssh/id_rsa
-            ProxyJump bastion
             StrictHostKeyChecking no
           EOF
           chmod 600 ~/.ssh/config
 
-      - name: Deploy Backend via SSH
+      - name: Deploy Backend (via Bastion)
         run: |
-          ssh -t app-server << 'EOF'
-            # đảm bảo .env có thể đọc
-            sudo chmod 644 /opt/myapp/.env || true
+          ssh backend-server << 'EOF'
+            IMAGE=${{ github.sha }}
+            REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend
 
-            # login, pull, recreate container với sudo
-            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            sudo docker pull ghcr.io/${{ github.repository_owner }}/backend:${{ needs.build_and_push.outputs.image_tag }}
-            sudo docker stop backend    || true
-            sudo docker rm  backend    || true
-            sudo docker run -d \
-              --name backend \
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+              | docker login --username AWS --password-stdin $REPO
+
+            docker pull $REPO:$IMAGE
+            docker stop backend || true
+            docker rm backend || true
+            docker run -d --name backend \
               --env-file /opt/myapp/.env \
               -p 3000:3000 \
               --restart unless-stopped \
-              ghcr.io/${{ github.repository_owner }}/backend:${{ needs.build_and_push.outputs.image_tag }}
+              $REPO:$IMAGE
           EOF
 
-      - name: Deploy Frontend via SSH
+      - name: Deploy Frontend (public)
         run: |
-          ssh -t frontend-server << 'EOF'
-            sudo chmod 644 /opt/myapp/.env || true
-            sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
-            sudo docker pull ghcr.io/${{ github.repository_owner }}/frontend:${{ needs.build_and_push.outputs.image_tag }}
-            sudo docker stop frontend  || true
-            sudo docker rm  frontend  || true
-            sudo docker run -d \
-              --name frontend \
+          ssh frontend-server << 'EOF'
+            IMAGE=${{ github.sha }}
+            REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend
+
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+              | docker login --username AWS --password-stdin $REPO
+
+            docker pull $REPO:$IMAGE
+            docker stop frontend || true
+            docker rm frontend || true
+            docker run -d --name frontend \
               -p 8080:80 \
               --restart unless-stopped \
-              ghcr.io/${{ github.repository_owner }}/frontend:${{ needs.build_and_push.outputs.image_tag }}
+              $REPO:$IMAGE
           EOF
