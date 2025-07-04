@@ -60,6 +60,9 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+      - name: Check SSM Instances (Debug)
+        run: |
+          aws ssm describe-instance-information --region ${{ secrets.AWS_REGION }} || echo failed
 
       - name: Deploy Backend (via SSM)
         run: |
