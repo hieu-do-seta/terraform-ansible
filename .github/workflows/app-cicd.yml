@@ -1,4 +1,4 @@
-name: App CI/CD (ECR + Bastion)
+name: App CI/CD (ECR + SSM)
 
 on:
   push:
@@ -53,69 +53,42 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Start SSH Agent
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          ssh-private-key: ${{ secrets.PROD_KEY }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Set up SSH config
+      - name: Deploy Backend (via SSM)
         run: |
-          mkdir -p ~/.ssh
-          cat > ~/.ssh/config <<EOF
-          Host bastion
-            HostName ${{ secrets.BASTION_IP }}
-            User ubuntu
-            IdentityFile ~/.ssh/id_rsa
-            StrictHostKeyChecking no
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids ${{ secrets.BACKEND_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --comment "Deploy backend via SSM" \
+            --parameters 'commands=[
+              "IMAGE=${{ github.sha }}",
+              "REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPO",
+              "docker pull $REPO:$IMAGE",
+              "docker stop backend || true",
+              "docker rm backend || true",
+              "docker run -d --name backend --env-file /opt/myapp/.env -p 3000:3000 --restart unless-stopped $REPO:$IMAGE"
+            ]'
 
-          Host backend-server
-            HostName ${{ secrets.SERVER_IP }}
-            User ubuntu
-            IdentityFile ~/.ssh/id_rsa
-            ProxyJump bastion
-            StrictHostKeyChecking no
-
-          Host frontend-server
-            HostName ${{ secrets.FRONTEND_IP }}
-            User ubuntu
-            IdentityFile ~/.ssh/id_rsa
-            StrictHostKeyChecking no
-          EOF
-          chmod 600 ~/.ssh/config
-
-      - name: Deploy Backend (via Bastion)
+      - name: Deploy Frontend (via SSM)
         run: |
-          ssh backend-server << 'EOF'
-            IMAGE=${{ github.sha }}
-            REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend
-
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-              | docker login --username AWS --password-stdin $REPO
-
-            docker pull $REPO:$IMAGE
-            docker stop backend || true
-            docker rm backend || true
-            docker run -d --name backend \
-              --env-file /opt/myapp/.env \
-              -p 3000:3000 \
-              --restart unless-stopped \
-              $REPO:$IMAGE
-          EOF
-
-      - name: Deploy Frontend (public)
-        run: |
-          ssh frontend-server << 'EOF'
-            IMAGE=${{ github.sha }}
-            REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend
-
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-              | docker login --username AWS --password-stdin $REPO
-
-            docker pull $REPO:$IMAGE
-            docker stop frontend || true
-            docker rm frontend || true
-            docker run -d --name frontend \
-              -p 8080:80 \
-              --restart unless-stopped \
-              $REPO:$IMAGE
-          EOF
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids ${{ secrets.FRONTEND_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --comment "Deploy frontend via SSM" \
+            --parameters 'commands=[
+              "IMAGE=${{ github.sha }}",
+              "REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPO",
+              "docker pull $REPO:$IMAGE",
+              "docker stop frontend || true",
+              "docker rm frontend || true",
+              "docker run -d --name frontend -p 8080:80 --restart unless-stopped $REPO:$IMAGE"
+            ]'
