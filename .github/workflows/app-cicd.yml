@@ -64,63 +64,64 @@ jobs:
         run: |
           aws ssm describe-instance-information --region ${{ secrets.AWS_REGION }} || echo failed
 
-      # - name: Deploy Backend (via SSM)
-      #   run: |
-      #     echo "🔧 Starting backend deployment via SSM..."
+      - name: Deploy Backend (via SSM)
+        run: |
+          echo "🔧 Starting backend deployment via SSM..."
 
-      #     COMMAND_ID=$(aws ssm send-command \
-      #       --document-name "AWS-RunShellScript" \
-      #       --instance-ids ${{ secrets.BACKEND_INSTANCE_ID }} \
-      #       --region ${{ secrets.AWS_REGION }} \
-      #       --comment "Deploy backend via SSM" \
-      #       --parameters 'commands=[
-      #         "echo ===== Start Debug Session =====",
-      #         "set -euxo pipefail",
-      #         "uname -a || echo uname failed",
-      #         "echo Checking Docker...",
-      #         "which docker || echo docker not found",
-      #         "docker --version || echo docker version failed",
-      #         "echo Checking AWS CLI...",
-      #         "which aws || echo aws CLI not found",
-      #         "aws --version || echo aws version failed",
-      #         "echo Checking .env file...",
-      #         "ls -l /opt/myapp/.env || echo .env file missing",
-      #         "echo ==== Pulling Docker image ====",
-      #         "IMAGE=${{ github.sha }}",
-      #         "REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend",
-      #         "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPO || echo login failed",
-      #         "docker pull $REPO:$IMAGE || echo docker pull failed",
-      #         "docker stop backend || echo no container to stop",
-      #         "docker rm backend || echo no container to remove",
-      #         "echo ==== Running backend container ====",
-      #         "docker run -d --name backend --env-file /opt/myapp/.env -p 3000:3000 --restart unless-stopped $REPO:$IMAGE || echo docker run failed"
-      #       ]' \
-      #       --query "Command.CommandId" \
-      #       --output text)
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids ${{ secrets.BACKEND_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --comment "Deploy backend via SSM" \
+            --parameters 'commands=[
+              "echo ===== Start Debug Session =====",
+              "#!/bin/bash",
+              "set -euxo pipefail",
+              "uname -a || echo uname failed",
+              "echo Checking Docker...",
+              "which docker || echo docker not found",
+              "docker --version || echo docker version failed",
+              "echo Checking AWS CLI...",
+              "which aws || echo aws CLI not found",
+              "aws --version || echo aws version failed",
+              "echo Checking .env file...",
+              "ls -l /opt/myapp/.env || echo .env file missing",
+              "echo ==== Pulling Docker image ====",
+              "IMAGE=${{ github.sha }}",
+              "REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend",
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPO || echo login failed",
+              "docker pull $REPO:$IMAGE || echo docker pull failed",
+              "docker stop backend || echo no container to stop",
+              "docker rm backend || echo no container to remove",
+              "echo ==== Running backend container ====",
+              "docker run -d --name backend --env-file /opt/myapp/.env -p 3000:3000 --restart unless-stopped $REPO:$IMAGE || echo docker run failed"
+            ]' \
+            --query "Command.CommandId" \
+            --output text)
 
-      #     echo "🪪 Command ID: $COMMAND_ID"
-      #     echo "🕐 Waiting for backend command to complete..."
+          echo "🪪 Command ID: $COMMAND_ID"
+          echo "🕐 Waiting for backend command to complete..."
 
-      #     aws ssm wait command-executed \
-      #       --command-id "$COMMAND_ID" \
-      #       --instance-id ${{ secrets.BACKEND_INSTANCE_ID }} \
-      #       --region ${{ secrets.AWS_REGION }}
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id ${{ secrets.BACKEND_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }}
 
-      #     echo "📦 STDOUT (Command Output):"
-      #     aws ssm get-command-invocation \
-      #       --command-id "$COMMAND_ID" \
-      #       --instance-id ${{ secrets.BACKEND_INSTANCE_ID }} \
-      #       --region ${{ secrets.AWS_REGION }} \
-      #       --query "StandardOutputContent" \
-      #       --output text
+          echo "📦 STDOUT (Command Output):"
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id ${{ secrets.BACKEND_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "StandardOutputContent" \
+            --output text
 
-      #     echo "❌ STDERR (Command Errors):"
-      #     aws ssm get-command-invocation \
-      #       --command-id "$COMMAND_ID" \
-      #       --instance-id ${{ secrets.BACKEND_INSTANCE_ID }} \
-      #       --region ${{ secrets.AWS_REGION }} \
-      #       --query "StandardErrorContent" \
-      #       --output text
+          echo "❌ STDERR (Command Errors):"
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id ${{ secrets.BACKEND_INSTANCE_ID }} \
+            --region ${{ secrets.AWS_REGION }} \
+            --query "StandardErrorContent" \
+            --output text
 
 
 
