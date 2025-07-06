@@ -74,28 +74,23 @@ jobs:
             --region ${{ secrets.AWS_REGION }} \
             --comment "Deploy backend via SSM" \
             --parameters 'commands=[
-              "echo ===== Start Debug Session =====",
-              "#!/bin/bash",
-              "set -euxo pipefail",
-              "uname -a || echo uname failed",
-              "echo Checking Docker...",
-              "which docker || echo docker not found",
-              "docker --version || echo docker version failed",
-              "echo Checking AWS CLI...",
-              "which aws || echo aws CLI not found",
-              "aws --version || echo aws version failed",
-              "echo Checking .env file...",
-              "ls -l /opt/myapp/.env || echo .env file missing",
-              "echo ==== Pulling Docker image ====",
-              "IMAGE=${{ github.sha }}",
-              "REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend",
-              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPO || echo login failed",
-              "docker pull $REPO:$IMAGE || echo docker pull failed",
-              "docker stop backend || echo no container to stop",
-              "docker rm backend || echo no container to remove",
-              "echo ==== Running backend container ====",
-              "docker run -d --name backend --env-file /opt/myapp/.env -p 3000:3000 --restart unless-stopped $REPO:$IMAGE || echo docker run failed"
-            ]' \
+              "bash", "-c",
+              "set -euxo pipefail
+              echo ===== Start Debug Session =====
+              uname -a || echo uname failed
+              which docker || echo docker not found
+              docker --version || echo docker version failed
+              which aws || echo aws not found
+              aws --version || echo aws version failed
+              ls -l /opt/myapp/.env || echo .env file missing
+              IMAGE=${{ github.sha }}
+              REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend
+              aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPO || echo login failed
+              docker pull $REPO:$IMAGE || echo docker pull failed
+              docker stop backend || echo no container to stop
+              docker rm backend || echo no container to remove
+              docker run -d --name backend --env-file /opt/myapp/.env -p 3000:3000 --restart unless-stopped $REPO:$IMAGE || echo docker run failed"
+            ]'\
             --query "Command.CommandId" \
             --output text)
 
