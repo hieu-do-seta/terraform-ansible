@@ -41,7 +41,7 @@ jobs:
       - name: Build & Push Frontend Image
         run: |
           docker buildx build \
-            --platform linux/amd64 \
+            --platform linux/arm64 \
             -f code/frontend/Dockerfile \
             -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend:${{ github.sha }} \
             code/frontend \
