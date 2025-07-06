@@ -133,6 +133,7 @@ jobs:
             --region ${{ secrets.AWS_REGION }} \
             --comment "Deploy frontend via SSM" \
             --parameters 'commands=[
+              "#!/bin/bash",
               "set -euxo pipefail",
               "IMAGE=${{ github.sha }}",
               "REPO=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/frontend",
