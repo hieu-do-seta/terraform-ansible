@@ -27,3 +27,13 @@ variable "environment" {
   description = "Deployment environment (e.g., dev, prod)"
   type        = string
 }
+
+variable "github_repo" {
+  type        = string
+  description = "Tên repository GitHub (owner/repo)"
+}
+
+variable "ecr_repositories" {
+  type        = list(string)
+  description = "Danh sách tên các ECR repositories sẽ tạo"
+}

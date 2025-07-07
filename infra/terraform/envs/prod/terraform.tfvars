@@ -8,3 +8,6 @@ db_username = "prod_db_user"
 db_password = "ProdDbStrongPassword123!"   # <== Lưu ý đặt pass mạnh!
 
 environment = "prod"
+
+github_repo = "hieu-do-seta/terraform-ansible"
+ecr_repositories = ["backend", "frontend"]

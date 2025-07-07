@@ -1,0 +1,50 @@
+- name: Thu thập facts về hệ thống (lấy kiến trúc CPU)
+  setup:
+
+- name: Cài curl và unzip (bắt buộc để cài AWS CLI)
+  apt:
+    name:
+      - curl
+      - unzip
+    update_cache: yes
+
+- name: Xác định kiến trúc CPU (aarch64 hoặc x86_64)
+  set_fact:
+    awscli_arch: "{{ 'aarch64' if ansible_facts['architecture'] == 'aarch64' else 'x86_64' }}"
+
+- name: Xóa bản AWS CLI cũ nếu có (thư mục gốc)
+  file:
+    path: /usr/local/aws-cli
+    state: absent
+  ignore_errors: yes
+
+- name: Xóa symlink aws cũ nếu có
+  file:
+    path: /usr/local/bin/aws
+    state: absent
+  ignore_errors: yes
+
+- name: Cài AWS CLI bản đúng kiến trúc (x86_64 hoặc aarch64)
+  shell: |
+    set -euxo pipefail
+    ARCH=$(uname -m)
+    CLI_URL="https://awscli.amazonaws.com/awscli-exe-linux-${ARCH}.zip"
+    TMP_DIR=$(mktemp -d)
+    cd $TMP_DIR
+    curl -sSLo awscliv2.zip "$CLI_URL"
+    unzip -q awscliv2.zip
+    sudo rm -rf /usr/local/aws-cli /usr/local/bin/aws
+    sudo ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+    /usr/local/bin/aws --version
+  args:
+    executable: /bin/bash
+  become: true
+  register: aws_cli_install
+  changed_when: "'aws-cli' in aws_cli_install.stdout"
+
+
+
+- name: In thông tin AWS CLI cài đặt
+  debug:
+    var: aws_cli_install.stdout_lines
+

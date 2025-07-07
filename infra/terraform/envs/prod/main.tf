@@ -1,3 +1,4 @@
+data "aws_caller_identity" "current" {}
 
 provider "aws" {
   region = var.region
@@ -35,6 +36,23 @@ module "rds" {
   vpc_id             = module.vpc.vpc_id
   rds_sg_id          = module.security_group.rds_sg_id
 }
+
+
+module "github_oidc_ecr" {
+  source = "../../modules/github_oidc_ecr"
+
+  region        = var.region
+  github_repo   = var.github_repo
+  ecr_repositories = var.ecr_repositories
+
+  instance_ids = [
+    module.ec2.backend_instance_id,
+    module.ec2.frontend_instance_id,
+    module.ec2.bastion_instance_id
+  ]
+}
+
+
 
 # // add output template
 # data "template_file" "inventory_prod" {

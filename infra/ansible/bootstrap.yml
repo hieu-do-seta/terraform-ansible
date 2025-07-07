@@ -10,3 +10,4 @@
   roles:
     - docker
     - app_setup
+    - aws
