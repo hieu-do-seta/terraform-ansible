@@ -38,13 +38,17 @@ resource "aws_iam_role" "github_actions" {
         },
         Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
-          StringEquals = {
-            "token.actions.githubusercontent.com:sub" = [
-            "repo:${var.github_repo}:ref:refs/heads/main",
-            "repo:${var.github_repo}:ref:refs/heads/dev",
-            "repo:${var.github_repo}:ref:refs/heads/develop"
-          ]
+          # StringEquals = {
+          #   "token.actions.githubusercontent.com:sub" = [
+          #   "repo:${var.github_repo}:ref:refs/heads/main",
+          #   "repo:${var.github_repo}:ref:refs/heads/dev",
+          #   "repo:${var.github_repo}:ref:refs/heads/develop"
+          # ]
+          # }
+          StringLike = {
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/*"
           }
+
         }
       }
     ]
