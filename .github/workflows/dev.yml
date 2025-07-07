@@ -53,7 +53,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: 🔑 Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@
+        uses: aws-actions/amazon-ecr-login@v1
       
       - name: Debug image tag & repo
         run: |
