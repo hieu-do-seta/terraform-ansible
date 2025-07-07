@@ -27,10 +27,7 @@ jobs:
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
-      - name: Debug image tag & repo
-        run: |
-          echo "Image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/backend:${{ github.sha }}"
-
+      
       - name: Build & Push Backend Image
         run: |
           docker buildx create --use
